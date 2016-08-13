@@ -1,6 +1,7 @@
 # coding: latin1
 
-import cgi, re, inspect, StringIO
+import cgi, re, inspect, io
+import collections
 
 # map -> area
 # object -> param
@@ -23,8 +24,8 @@ _inline_elements = ('tt', 'i', 'b', 'big', 'small') + ('label',) + \
                     ('sub', 'sup') + ('ins', 'del') + ('span',) + ('bdo',) + \
                     ('th', 'td')
 
-qualities = {'empty': u' /', 'tagnl': u'\n', 'preendtagnl': u'\n',
-    'endtagnl': u'\n'}
+qualities = {'empty': ' /', 'tagnl': '\n', 'preendtagnl': '\n',
+    'endtagnl': '\n'}
 asso = {_empty_inline: ('empty',), _empty_oneline: ('empty', 'tagnl'),
     _block_elements: ('tagnl', 'preendtagnl', 'endtagnl'),
     _oneline_elements: ('endtagnl',),
@@ -46,15 +47,15 @@ class dummy(object):
     pass
 
 _elements = {}
-for elems, which in asso.iteritems():
+for elems, which in asso.items():
     for e in elems:
         _elements[e] = dummy()
         _elements[e].descendants = descendants.get(e)
         _elements[e].overwrite = overwrite.get(e, ())
         _elements[e].defaultattrs = defaultattrs.get(e)
         _elements[e].ele_as_attr = element_as_attribute.get(e)
-        for q, v in qualities.iteritems():
-            setattr(_elements[e], q, u'')
+        for q, v in qualities.items():
+            setattr(_elements[e], q, '')
             if q in which:
                 setattr(_elements[e], q, v)
 
@@ -104,7 +105,7 @@ def selected(itr, hit):
         if first:
             first = False
             if not hit or hit[0] == None: select = 1
-        if i[0] in hit or unicode(i[0]) in hit:
+        if i[0] in hit or str(i[0]) in hit:
             select = 1
         if select:
             i = list(i) + [dict(selected=1)]
@@ -117,7 +118,7 @@ def key(inst):
         return None
 
 def iscontainer(obj):
-    if isinstance(obj, basestring):
+    if isinstance(obj, str):
         return False
     elif isinstance(obj, (tuple, list)):
         return True
@@ -130,7 +131,7 @@ def iscontainer(obj):
 def isdictlike(obj):
     return hasattr(obj, 'items')
 
-class Html(unicode):
+class Html(str):
     '''Class representing already escaped (X)HTML.
 
     It is derived from unicode, so it behaves like unicode strings.
@@ -155,9 +156,9 @@ class Html(unicode):
     def __add__(self, other):
         if not isinstance(other, self.__class__):
             other = esc(other)
-        return self.__class__(unicode.__add__(self, other))
+        return self.__class__(str.__add__(self, other))
 
-class d(unicode):
+class d(str):
     ''' for doing u'some cheap ${a_did}DID provider$'.
 
     >>> u'$' % d()
@@ -220,7 +221,7 @@ class d(unicode):
             if groups['text']:
                 self.out.write(esc(groups['text']))
             elif groups['literal']:
-                self.out.write(u'$')
+                self.out.write('$')
             elif groups['end']:
                 self.out.endtag(tagstack.pop())
             elif groups['named']:
@@ -241,7 +242,7 @@ class d(unicode):
                         obj = self.dic[id]
                         if isinstance(obj, Html):
                             self.out.write(obj)
-                        elif isinstance(obj, basestring):
+                        elif isinstance(obj, str):
                             if id_sane == 'a':
                                 stdattr = 'href'
                             else:
@@ -323,9 +324,9 @@ def esc(obj, nbsp=False, quote=False):
     if isinstance(obj, Html):
         return obj
     elif obj == None:
-        return u''
-    s = cgi.escape(unicode(obj), quote)
-    if nbsp: s = re.sub(u' ', u'&nbsp;', s)
+        return ''
+    s = cgi.escape(str(obj), quote)
+    if nbsp: s = re.sub(' ', '&nbsp;', s)
     return s
 
 def attrs(adic):
@@ -349,14 +350,14 @@ def attrs(adic):
     '''
     overwrite = {}
     copy = {}
-    for key, val in adic.items():
+    for key, val in list(adic.items()):
         nk = key
         if key[-1] == '_':
             nk = key[:-1]
         nk = nk.replace('_', '-')
         if nk in ('selected', 'checked', 'declare', 'defer', 'disabled',
             'ismap', 'multiple', 'nohref', 'readonly') and \
-            not isinstance(val, basestring):
+            not isinstance(val, str):
             if val:
                 val = nk
             else:
@@ -368,7 +369,7 @@ def attrs(adic):
     copy.update(overwrite)
     adic = copy
     if adic:
-        a = map(lambda key: key + '="' + esc(adic[key], quote=1) + '"', adic)
+        a = [key + '="' + esc(adic[key], quote=1) + '"' for key in adic]
         a.sort()
         return ' ' + ' '.join(a)
     else:
@@ -531,7 +532,7 @@ class Output(object):
             yield lambda s=s: self.form_control(s, prefill)
     def form_control(self, instructs, prefill={}):
         for w in instructs:
-            w1 = unicode(w[1])   # to handle only with names of string type
+            w1 = str(w[1])   # to handle only with names of string type
             if w[0] in ('text', 'password'):
                 # type, name, Label(, size)
                 d = dict(id=w1, name=w1, type=w[0], size=30)
@@ -609,7 +610,7 @@ class Output(object):
         '''
         x = _elements[element]
         ats = join_dicts(attributes, keywords)
-        self.write(u'<%s%s%s>%s' % (element, attrs(ats), x.empty, x.tagnl))
+        self.write('<%s%s%s>%s' % (element, attrs(ats), x.empty, x.tagnl))
 
     def endtag(self, element):
         '''Writes the closing tag for %element.
@@ -626,7 +627,7 @@ class Output(object):
         '''
         x = _elements[element]
         if x.empty: raise ValueError('I cant close empty elements.')
-        self.write(u'%s</%s>%s' % (x.preendtagnl, element, x.endtagnl))
+        self.write('%s</%s>%s' % (x.preendtagnl, element, x.endtagnl))
 
     def start(self, title, style_url=None, style=None):
         self.write('''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
@@ -666,7 +667,7 @@ class Output(object):
             filling = [filling]
         for fill in filling:
             self.tag(element, atdic, **keywords)
-            if callable(fill):
+            if isinstance(fill, collections.Callable):
                 fill()
             else:
                 self.write(esc(fill))
@@ -771,7 +772,7 @@ class Output(object):
 
 class String(object):
     def __init__(self):
-        self._buffer = StringIO.StringIO()
+        self._buffer = io.StringIO()
         self._output = Output(self._buffer)
         self.write = self._buffer.write
 
@@ -804,8 +805,8 @@ class String(object):
     def d(self, *pos, **key):
         return d(self._output, self._flush, *pos, **key)
 
-    names = map(lambda x: x[0], inspect.getmembers(Output, inspect.ismethod))
-    names = filter(lambda x: x[0] != '_', names)  # no "private" members
+    names = [x[0] for x in inspect.getmembers(Output, inspect.ismethod)]
+    names = [x for x in names if x[0] != '_']  # no "private" members
     redirect = set(names).union(_elements)
     del names
 
