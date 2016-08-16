@@ -515,7 +515,7 @@ class Output(object):
         self.file = file
         self.write = self.file.write
 
-    def form_rows(self, layout, scaffold, prefill={}, errors=[]):
+    def form_rows(self, layout, scaffold, prefill={}, errors=()):
         scf = []
         hiddenfirst = False
         for s in scaffold:
@@ -545,12 +545,14 @@ class Output(object):
             for s in scf:
                 y = [lambda s=s: self.form_label(s),
                      lambda s=s: self.form_control(s, prefill)]
-                if err: y.append(lambda s=s: self.form_error(s, errors))
+                if err:
+                    y.append(lambda s=s: self.form_error(s, errors))
                 yield y
-        else:  # emit form in cols: 1 row lables, 1 row form elements, 1r errors
+        else:  # emit form in cols: 1 row lables, 1row form elements, 1r errors
             yield self.form_labels(scf)
             yield self.form_controls(scf, prefill)
-            if err: yield self.form_errors(scf, errors)
+            if err:
+                yield self.form_errors(scf, errors)
 
     def form_labels(self, scf):
         for s in scf:
@@ -572,8 +574,10 @@ class Output(object):
             if w[0] in ('text', 'password'):
                 # type, name, Label(, size)
                 d = dict(id=w1, name=w1, type=w[0], size=30)
-                if len(w) >= 4: d['size'] = w[3]
-                if d['name'] in prefill: d['value'] = prefill[d['name']]
+                if len(w) >= 4:
+                    d['size'] = w[3]
+                if d['name'] in prefill:
+                    d['value'] = prefill[d['name']]
                 self.input(d)
             elif w[0] == 'submit':
                 # type, Label _or_ type, name, value/Label
@@ -593,7 +597,7 @@ class Output(object):
             elif w[0] == 'dropdown':
                 # dropdown, name, Label, array
                 d = dict(id=w1, name=w1, size=1)
-                self.select(selected(w[3], prefill.get(d['name'], None)), d)
+                self.select(selected(w[3], prefill.get(d['name'])), d)
 
     def form_errors(self, scf, errors):
         for s in scf:
@@ -664,7 +668,8 @@ class Output(object):
         ValueError: I cant close empty elements.
         '''
         x = _elements[element]
-        if x.empty: raise ValueError('I cant close empty elements.')
+        if x.empty:
+            raise ValueError('I cant close empty elements.')
         self.write('%s</%s>%s' % (x.preendtagnl, element, x.endtagnl))
 
     def start(self, title, style_url=None, style=None):
@@ -695,9 +700,9 @@ class Output(object):
         ValueError: I cant close empty elements.
         >>> filled_element('p', 'Paragraph ', class_='example')
         u'<p class="example">Paragraph </p>'
-        >>> filled_element('a', 'Execute it again!', {'id': 'unique', 'href': \
+        >>> filled_element('a', 'Exec again!', {'id': 'unique', 'href': \
         'autoexec.bat'}, class_='example')
-        u'<a class="example" href="autoexec.bat" id="unique">Execute it again!</a>'
+        u'<a class="example" href="autoexec.bat" id="unique">Exec again!</a>'
         >>> type(filled_element('b', ''))
         <class '__main__.Html'>
         '''
@@ -775,15 +780,15 @@ class Output(object):
         for one in container:
             cdata, cattrs = decompose_element_attr(one)
             all_attrs = join_dicts(main_attrs, cattrs)
-            __name, cdata, desc, desc_at = _element_fixup(__name, cdata,
-                                                          all_attrs)
+            __name, cdata, descendant, descendant_attrs = _element_fixup(
+                __name, cdata, all_attrs)
             if iscontainer(cdata):
                 eaa = _elements[__name].ele_as_attr
                 eaav = all_attrs.pop(eaa, None)
                 self.tag(__name, all_attrs)
                 if eaa and eaav is not None:
                     self.filled_element(eaa, eaav)
-                self.element_array(desc, cdata, **desc_at)
+                self.element_array(descendant, cdata, **descendant_attrs)
                 self.endtag(__name)
             else:
                 self.filled_element(__name, cdata, all_attrs)
