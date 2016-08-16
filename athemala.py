@@ -13,31 +13,38 @@ import re
 # table -> caption, colgroup, thead, tfoot, tbody -> col, tr -> th, td
 _empty_inline = ('img',)
 _empty_oneline = ('area', 'base', 'col', 'input', 'link', 'meta', 'param') + \
-    ('br', 'hr')
+                 ('br', 'hr')
 _false_block_elements = ('script', 'style', 'object', 'fieldset') + \
-                    ('pre',) + ('p', 'div', 'address', 'textarea')
+                        ('pre',) + ('p', 'div', 'address', 'textarea')
 _block_elements = _false_block_elements + ('noscript',) + ('ul', 'ol', 'dl',
-    'table', 'thead', 'tfoot', 'tbody', 'colgroup', 'select', 'optgroup') + \
-    ('blockquote', 'form', 'html', 'head', 'body', 'map')
+                                                           'table', 'thead',
+                                                           'tfoot', 'tbody',
+                                                           'colgroup',
+                                                           'select',
+                                                           'optgroup') + \
+                  ('blockquote', 'form', 'html', 'head', 'body', 'map')
 _oneline_elements = ('h1', 'h2', 'h3', 'h4', 'h5', 'h6') + ('caption',
-    'button') + ('li', 'dt', 'dd', 'tr', 'option', 'legend') + ('title',)
+                                                            'button') + (
+                        'li', 'dt', 'dd', 'tr', 'option', 'legend') + (
+                    'title',)
 _inline_elements = ('tt', 'i', 'b', 'big', 'small') + ('label',) + \
-                    ('em', 'strong', 'dfn', 'code', 'samp', 'kbd', 'var',
+                   ('em', 'strong', 'dfn', 'code', 'samp', 'kbd', 'var',
                     'cite', 'abbr', 'acronym', 'q') + ('a', 'img') + \
-                    ('sub', 'sup') + ('ins', 'del') + ('span',) + ('bdo',) + \
-                    ('th', 'td')
+                   ('sub', 'sup') + ('ins', 'del') + ('span',) + ('bdo',) + \
+                   ('th', 'td')
 
 qualities = {'empty': ' /', 'tagnl': '\n', 'preendtagnl': '\n',
-    'endtagnl': '\n'}
+             'endtagnl': '\n'}
 asso = {_empty_inline: ('empty',), _empty_oneline: ('empty', 'tagnl'),
-    _block_elements: ('tagnl', 'preendtagnl', 'endtagnl'),
-    _oneline_elements: ('endtagnl',),
-    _inline_elements: ()}
+        _block_elements: ('tagnl', 'preendtagnl', 'endtagnl'),
+        _oneline_elements: ('endtagnl',),
+        _inline_elements: ()}
 
 descendants = {'ul': ('li',), 'ol': ('li',), 'li': ('ul', 'ol'),
-    'table': ('tr',), 'tr': ('td', 'th'), 'td': ('table',),
-    'th': ('table',), 'form': ('table', 'fieldset'), 'fieldset': ('table',),
-    'select': ('option',)}
+               'table': ('tr',), 'tr': ('td', 'th'), 'td': ('table',),
+               'th': ('table',), 'form': ('table', 'fieldset'),
+               'fieldset': ('table',),
+               'select': ('option',)}
 overwrite = {'ul': ('ol',), 'td': ('th',)}
 element_as_attribute = {'table': 'caption', 'fieldset': 'legend'}
 
@@ -46,8 +53,10 @@ element_as_attribute = {'table': 'caption', 'fieldset': 'legend'}
 # in other words: descendants should be () for these elements
 defaultattrs = {'a': ('href', True), 'option': ('value', True, 'selected')}
 
+
 class dummy(object):
     pass
+
 
 _elements = {}
 for elems, which in asso.items():
@@ -63,7 +72,10 @@ for elems, which in asso.items():
                 setattr(_elements[e], q, v)
 
 del asso, qualities, descendants, overwrite, defaultattrs, element_as_attribute
+
+
 # example: if _elements[element_name].empty: ...
+
 
 def _element_fixup(name, data, attrs):
     '''Returns the new name and descendant based on the current environment.
@@ -97,8 +109,10 @@ def _element_fixup(name, data, attrs):
                 # desc_a[desc] = avalue
     topass = _elements[desc].ele_as_attr
     value = attrs.pop(topass, None)
-    if topass: desc_a[topass] = value
+    if topass:
+        desc_a[topass] = value
     return name, data, desc, desc_a
+
 
 def selected(itr, hit):
     if not iscontainer(hit): hit = [hit]
@@ -114,11 +128,13 @@ def selected(itr, hit):
             i = list(i) + [dict(selected=1)]
         yield i
 
+
 def key(inst):
     if inst[0] != 'submit':
         return inst[1]
     else:
         return None
+
 
 def iscontainer(obj):
     if isinstance(obj, str):
@@ -131,8 +147,10 @@ def iscontainer(obj):
         return False
     return True
 
+
 def isdictlike(obj):
     return hasattr(obj, 'items')
+
 
 class Html(str):
     '''Class representing already escaped (X)HTML.
@@ -160,6 +178,7 @@ class Html(str):
         if not isinstance(other, self.__class__):
             other = esc(other)
         return self.__class__(str.__add__(self, other))
+
 
 class d(str):
     ''' for doing u'some cheap ${a_did}DID provider$'.
@@ -200,7 +219,7 @@ class d(str):
         (?P<literal>[$][$]) |
         (?P<named>[$][{]  (?P<id>[^}]*)  (?P<closed>[}])? ) |
         (?P<end>[$])''',
-                    re.VERBOSE)
+                     re.VERBOSE)
     id_sanitize = re.compile('[a-z]*')
 
     def __new__(cls, *pos, **kwd):
@@ -230,18 +249,18 @@ class d(str):
             elif groups['named']:
                 if not groups['closed']:
                     raise ValueError('placeholder open')
-                elif not id: # extensive end marker
+                elif not id:  # extensive end marker
                     self.out.endtag(tagstack.pop())
-                else: # we have an id for the marker
+                else:  # we have an id for the marker
                     id_sane = self.id_sanitize.match(id).group()
                     if id not in self.dic:
                         if id_sane in _elements:
                             self.out.tag(id_sane)
                             if not _elements[id_sane].empty:
                                 tagstack.append(id_sane)
-                        else: # id refers to an entity
+                        else:  # id refers to an entity
                             self.out.write('&' + id + ';')
-                    else: # id is in self.dic
+                    else:  # id is in self.dic
                         obj = self.dic[id]
                         if isinstance(obj, Html):
                             self.out.write(obj)
@@ -261,6 +280,7 @@ class d(str):
                 assert False, 'pat should not match groupless'
         if self.flush:
             return self.flush()
+
 
 def join_dicts(*pos, **kw):
     '''Returns /one/ new joined dictionary.
@@ -292,6 +312,7 @@ def join_dicts(*pos, **kw):
     for dict in all:
         if dict: bigdic.update(dict)
     return bigdic
+
 
 def esc(obj, nbsp=False, quote=False):
     '''Returns an HTML/XML escaped unicode string.
@@ -332,6 +353,7 @@ def esc(obj, nbsp=False, quote=False):
     if nbsp: s = re.sub(' ', '&nbsp;', s)
     return s
 
+
 def attrs(adic):
     '''Returns a proper string of attributes for inclusion in start tags.
 
@@ -359,8 +381,8 @@ def attrs(adic):
             nk = key[:-1]
         nk = nk.replace('_', '-')
         if nk in ('selected', 'checked', 'declare', 'defer', 'disabled',
-            'ismap', 'multiple', 'nohref', 'readonly') and \
-            not isinstance(val, str):
+                  'ismap', 'multiple', 'nohref', 'readonly') and \
+                not isinstance(val, str):
             if val:
                 val = nk
             else:
@@ -377,6 +399,7 @@ def attrs(adic):
         return ' ' + ' '.join(a)
     else:
         return ''
+
 
 def decompose_element_attr(obj, prefer_container=0):
     '''Returns a 2-tuple: the element data and its attribute mapping.
@@ -479,6 +502,7 @@ def decompose_element_attr(obj, prefer_container=0):
             attr = {}
     return obj, attr
 
+
 class Output(object):
     def __init__(self, file):
         self.file = file
@@ -505,18 +529,18 @@ class Output(object):
                 cs = 3
             elif layout == 'rows':
                 cs = 2
-            else: # layout == 'cols'
+            else:  # layout == 'cols'
                 cs = len(scf)
             yield [m, dict(colspan=cs)]
         else:
             err = len(errors)
-        if layout == 'rows': # emit rows like: label, form element, error
+        if layout == 'rows':  # emit rows like: label, form element, error
             for s in scf:
                 y = [lambda s=s: self.form_label(s),
-                    lambda s=s: self.form_control(s, prefill)]
+                     lambda s=s: self.form_control(s, prefill)]
                 if err: y.append(lambda s=s: self.form_error(s, errors))
                 yield y
-        else: # emit form in cols: 1 row lables, 1 row form elements, 1r errors
+        else:  # emit form in cols: 1 row lables, 1 row form elements, 1r errors
             yield self.form_labels(scf)
             yield self.form_controls(scf, prefill)
             if err: yield self.form_errors(scf, errors)
@@ -524,6 +548,7 @@ class Output(object):
     def form_labels(self, scf):
         for s in scf:
             yield lambda s=s: self.form_label(s)
+
     def form_label(self, instructs):
         for w in instructs:
             if w[0] in ('text', 'password', 'dropdown'):
@@ -533,9 +558,10 @@ class Output(object):
     def form_controls(self, scf, prefill={}):
         for s in scf:
             yield lambda s=s: self.form_control(s, prefill)
+
     def form_control(self, instructs, prefill={}):
         for w in instructs:
-            w1 = str(w[1])   # to handle only with names of string type
+            w1 = str(w[1])  # to handle only with names of string type
             if w[0] in ('text', 'password'):
                 # type, name, Label(, size)
                 d = dict(id=w1, name=w1, type=w[0], size=30)
@@ -565,6 +591,7 @@ class Output(object):
     def form_errors(self, scf, errors):
         for s in scf:
             yield lambda s=s: self.form_error(s, errors)
+
     def form_error(self, instructs, errors):
         p = []
         for w in instructs:
@@ -734,12 +761,14 @@ class Output(object):
         # they have to omit they natural wrapping
         if __name in super_elements:
             container = [container]
-        container, main_attrs = decompose_element_attr(container, prefer_container=1)
+        container, main_attrs = decompose_element_attr(container,
+                                                       prefer_container=1)
         main_attrs = join_dicts(main_attrs, key)
         for one in container:
             cdata, cattrs = decompose_element_attr(one)
             all_attrs = join_dicts(main_attrs, cattrs)
-            __name, cdata, desc, desc_at = _element_fixup(__name, cdata, all_attrs)
+            __name, cdata, desc, desc_at = _element_fixup(__name, cdata,
+                                                          all_attrs)
             if iscontainer(cdata):
                 eaa = _elements[__name].ele_as_attr
                 eaav = all_attrs.pop(eaa, None)
@@ -761,7 +790,8 @@ class Output(object):
             if _elements[name].empty:
                 f = lambda self, *pos, **key: self.tag(name, *pos, **key)
             else:
-                f = lambda self, *pos, **key: self.element_array(name, *pos, **key)
+                f = lambda self, *pos, **key: self.element_array(name, *pos,
+                                                                 **key)
             setattr(self.__class__, name, f)
             return getattr(self, name)
         else:
@@ -769,6 +799,7 @@ class Output(object):
 
     def d(self, *pos, **key):
         return d(self, None, *pos, **key)
+
 
 # have a normal class html.Output(file-like-obj-to-write-to)
 # and a html.String() if you just want to get strings...
@@ -782,12 +813,13 @@ class String(object):
     def __getattr__(self, name):
         if name in self.redirect:
             setattr(self.__class__, name,
-                lambda self, *pos, **key: self._call_wrapper(name, *pos, **key))
+                    lambda self, *pos, **key: self._call_wrapper(name, *pos,
+                                                                 **key))
             return getattr(self, name)
         else:
             raise AttributeError
 
-    #def __getattribute__(self, name):
+    # def __getattribute__(self, name):
     #    def get(what): return object.__getattribute__(self, what)
     #    cw = get('_call_wrapper')
     #    if name in get('redirect'):
@@ -813,9 +845,11 @@ class String(object):
     redirect = set(names).union(_elements)
     del names
 
+
 def _test():
     import doctest
     doctest.testmod()
+
 
 if __name__ == '__main__':
     _test()
