@@ -1,4 +1,4 @@
-# coding: latin1
+# coding: utf-8
 
 import cgi
 import collections
