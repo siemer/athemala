@@ -1,16 +1,18 @@
 # coding: utf-8
 
-import cgi
 import collections
+import html
 import inspect
 import io
 import re
+import types
 
 # map -> area
 # object -> param
 # form, fieldset -> legend
 # form -> fieldset, caption, input, label, (select -> optgroup -> option)
 # table -> caption, colgroup, thead, tfoot, tbody -> col, tr -> th, td
+
 _empty_inline = ('img',)
 _empty_oneline = ('area', 'base', 'col', 'input', 'link', 'meta', 'param') + \
                  ('br', 'hr')
@@ -54,14 +56,10 @@ element_as_attribute = {'table': 'caption', 'fieldset': 'legend'}
 defaultattrs = {'a': ('href', True), 'option': ('value', True, 'selected')}
 
 
-class dummy(object):
-    pass
-
-
 _elements = {}
 for elems, which in asso.items():
     for e in elems:
-        _elements[e] = dummy()
+        _elements[e] = types.SimpleNamespace()
         _elements[e].descendants = descendants.get(e)
         _elements[e].overwrite = overwrite.get(e, ())
         _elements[e].defaultattrs = defaultattrs.get(e)
@@ -93,7 +91,7 @@ def _element_fixup(name, data, attrs):
             name = e
     if iscontainer(data) and _elements[name].defaultattrs:
         for na, val in zip(_elements[name].defaultattrs, data):
-            if na == True:
+            if na is True:
                 data = val
             else:
                 attrs[na] = val
@@ -105,7 +103,8 @@ def _element_fixup(name, data, attrs):
             avalue = attrs.pop(d, None)
             if avalue:
                 desc = d
-                # we acutally don't pass on the value of the descendant indicator
+                # we acutally don't pass on the value of the descendant
+                # indicator
                 # desc_a[desc] = avalue
     topass = _elements[desc].ele_as_attr
     value = attrs.pop(topass, None)
@@ -115,13 +114,15 @@ def _element_fixup(name, data, attrs):
 
 
 def selected(itr, hit):
-    if not iscontainer(hit): hit = [hit]
+    if not iscontainer(hit):
+        hit = [hit]
     first = True
     for i in itr:
         select = 0
         if first:
             first = False
-            if not hit or hit[0] == None: select = 1
+            if not hit or hit[0] is None:
+                select = 1
         if i[0] in hit or str(i[0]) in hit:
             select = 1
         if select:
@@ -226,6 +227,7 @@ class d(str):
         return super(d, cls).__new__(cls)
 
     def __init__(self, output, flush_func, *pos, **kwd):
+        super().__init__()
         self.out = output
         self.flush = flush_func
         self.dic = dict(*pos, **kwd)
@@ -310,7 +312,8 @@ def join_dicts(*pos, **kw):
     all = pos + (kw,)
     bigdic = {}
     for dict in all:
-        if dict: bigdic.update(dict)
+        if dict:
+            bigdic.update(dict)
     return bigdic
 
 
@@ -347,10 +350,11 @@ def esc(obj, nbsp=False, quote=False):
     '''
     if isinstance(obj, Html):
         return obj
-    elif obj == None:
+    elif obj is None:
         return ''
-    s = cgi.escape(str(obj), quote)
-    if nbsp: s = re.sub(' ', '&nbsp;', s)
+    s = html.escape(str(obj), quote)
+    if nbsp:
+        s = re.sub(' ', '&nbsp;', s)
     return s
 
 
@@ -394,7 +398,7 @@ def attrs(adic):
     copy.update(overwrite)
     adic = copy
     if adic:
-        a = [key + '="' + esc(adic[key], quote=1) + '"' for key in adic]
+        a = [key + '="' + esc(adic[key], quote=True) + '"' for key in adic]
         a.sort()
         return ' ' + ' '.join(a)
     else:
@@ -471,9 +475,11 @@ def decompose_element_attr(obj, prefer_container=0):
     ('cell', {})
     >>> decompose_element_attr(('cell', dict(with='attr')))
     ('cell', {'with': 'attr'})
-    >>> decompose_element_attr((['row cell1', 'cell2', 'cell3'], dict(with='attr')))
+    >>> decompose_element_attr((['row cell1', 'cell2', 'cell3'],
+        dict(with='attr')))
     (['row cell1', 'cell2', 'cell3'], {'with': 'attr'})
-    >>> decompose_element_attr(['row cell1', 'cell2', 'cell3', dict(with='attr')])
+    >>> decompose_element_attr(['row cell1', 'cell2', 'cell3',
+        dict(with='attr')])
     (['row cell1', 'cell2', 'cell3'], {'with': 'attr'})
     >>> decompose_element_attr(['row cell1', 'cell2', 'cell3'])
     (['row cell1', 'cell2', 'cell3'], {})
@@ -481,7 +487,8 @@ def decompose_element_attr(obj, prefer_container=0):
     (['row cell1', ('cell2', {'th': 1}), 'cell3'], {})
     >>> decompose_element_attr(('cell2', {'th': 1}))
     ('cell2', {'th': 1})
-    >>> decompose_element_attr(['row cell1', (['ce', 'll'], {'th': 1}), 'cell3'])
+    >>> decompose_element_attr(['row cell1', (['ce', 'll'], {'th': 1}),
+        'cell3'])
     (['row cell1', (['ce', 'll'], {'th': 1}), 'cell3'], {})
     >>> decompose_element_attr((['ce', 'll'], {'th': 1}))
     (['ce', 'll'], {'th': 1})
@@ -638,9 +645,10 @@ class Output(object):
         >>> tag('p', x='zero', x_='&')
         u'<p x="&amp;">'
         '''
-        x = _elements[element]
-        ats = join_dicts(attributes, keywords)
-        self.write('<%s%s%s>%s' % (element, attrs(ats), x.empty, x.tagnl))
+        element_info = _elements[element]
+        combined_attributes = join_dicts(attributes, keywords)
+        self.write('<%s%s%s>%s' % (element, attrs(combined_attributes),
+                                   element_info.empty, element_info.tagnl))
 
     def endtag(self, element):
         '''Writes the closing tag for %element.
@@ -773,7 +781,7 @@ class Output(object):
                 eaa = _elements[__name].ele_as_attr
                 eaav = all_attrs.pop(eaa, None)
                 self.tag(__name, all_attrs)
-                if eaa and eaav != None:
+                if eaa and eaav is not None:
                     self.filled_element(eaa, eaav)
                 self.element_array(desc, cdata, **desc_at)
                 self.endtag(__name)
@@ -788,10 +796,11 @@ class Output(object):
         # print '__getattr__ called for:', name
         if name in _elements:
             if _elements[name].empty:
-                f = lambda self, *pos, **key: self.tag(name, *pos, **key)
+                def f(self, *pos, **key):
+                    self.tag(name, *pos, **key)
             else:
-                f = lambda self, *pos, **key: self.element_array(name, *pos,
-                                                                 **key)
+                def f(self, *pow, **key):
+                    self.element_array(name, *pow, **key)
             setattr(self.__class__, name, f)
             return getattr(self, name)
         else:
