@@ -1,7 +1,10 @@
 # coding: latin1
 
-import cgi, re, inspect, io
+import cgi
 import collections
+import inspect
+import io
+import re
 
 # map -> area
 # object -> param
