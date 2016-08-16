@@ -181,14 +181,14 @@ class Html(str):
         return self.__class__(str.__add__(self, other))
 
 
-class d(str):
+class D(str):
     ''' for doing u'some cheap ${a_did}DID provider$'.
 
-    >>> u'$' % d()
+    >>> u'$' % D()
     Traceback (most recent call last):
     ...
     IndexError: pop from empty list
-    >>> u'${' % d()
+    >>> u'${' % D()
     Traceback (most recent call last):
     ...
     ValueError: placeholder open
@@ -202,7 +202,7 @@ class d(str):
     ... Or an ${em}empty one${br{}, or not?$
     ... ${strong}Cascade ${em}with ${Html-ex} special part${}$.
     ... And some ${a-default} attributes ${}${hr_cl}.""" % \
-        d({'some-tag': None, 'strong': dict(weak='no'), 'Html-ex': Html('<>'),
+        D({'some-tag': None, 'strong': dict(weak='no'), 'Html-ex': Html('<>'),
     ... 'a-default': 'http://backsla.sh', 'hr_cl': 'blue', 1: 2})
     Text
     Dollar$.
@@ -224,7 +224,7 @@ class d(str):
     id_sanitize = re.compile('[a-z]*')
 
     def __new__(cls, *pos, **kwd):
-        return super(d, cls).__new__(cls)
+        return super(D, cls).__new__(cls)
 
     def __init__(self, output, flush_func, *pos, **kwd):
         super().__init__()
@@ -807,7 +807,7 @@ class Output(object):
             raise AttributeError
 
     def d(self, *pos, **key):
-        return d(self, None, *pos, **key)
+        return D(self, None, *pos, **key)
 
 
 # have a normal class html.Output(file-like-obj-to-write-to)
@@ -847,7 +847,7 @@ class String(object):
         return self._flush()
 
     def d(self, *pos, **key):
-        return d(self._output, self._flush, *pos, **key)
+        return D(self._output, self._flush, *pos, **key)
 
     names = [x[0] for x in inspect.getmembers(Output, inspect.ismethod)]
     names = [x for x in names if x[0] != '_']  # no "private" members
