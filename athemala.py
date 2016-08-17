@@ -405,7 +405,7 @@ def attrs(adic):
         return ''
 
 
-def decompose_element_attr(obj, prefer_container=0):
+def decompose(obj, prefer_container=0):
     '''Returns a 2-tuple: the element data and its attribute mapping.
 
     This function is a helper for table() and posibly other html
@@ -467,32 +467,29 @@ def decompose_element_attr(obj, prefer_container=0):
     the item expects luples. Pass "inline_attr=1" to the function in this
     case if you can...
 
-    >>> decompose_element_attr(1)
+    >>> decompose(1)
     (1, {})
-    >>> decompose_element_attr([1, 2])
+    >>> decompose([1, 2])
     ([1, 2], {})
-    >>> decompose_element_attr('cell')
+    >>> decompose('cell')
     ('cell', {})
-    >>> decompose_element_attr(('cell', dict(with='attr')))
+    >>> decompose(('cell', dict(with='attr')))
     ('cell', {'with': 'attr'})
-    >>> decompose_element_attr((['row cell1', 'cell2', 'cell3'],
-        dict(with='attr')))
+    >>> decompose((['row cell1', 'cell2', 'cell3'], dict(with='attr')))
     (['row cell1', 'cell2', 'cell3'], {'with': 'attr'})
-    >>> decompose_element_attr(['row cell1', 'cell2', 'cell3',
-        dict(with='attr')])
+    >>> decompose(['row cell1', 'cell2', 'cell3', dict(with='attr')])
     (['row cell1', 'cell2', 'cell3'], {'with': 'attr'})
-    >>> decompose_element_attr(['row cell1', 'cell2', 'cell3'])
+    >>> decompose(['row cell1', 'cell2', 'cell3'])
     (['row cell1', 'cell2', 'cell3'], {})
-    >>> decompose_element_attr(['row cell1', ('cell2', {'th': 1}), 'cell3'])
+    >>> decompose(['row cell1', ('cell2', {'th': 1}), 'cell3'])
     (['row cell1', ('cell2', {'th': 1}), 'cell3'], {})
-    >>> decompose_element_attr(('cell2', {'th': 1}))
+    >>> decompose(('cell2', {'th': 1}))
     ('cell2', {'th': 1})
-    >>> decompose_element_attr(['row cell1', (['ce', 'll'], {'th': 1}),
-        'cell3'])
+    >>> decompose(['row cell1', (['ce', 'll'], {'th': 1}), 'cell3'])
     (['row cell1', (['ce', 'll'], {'th': 1}), 'cell3'], {})
-    >>> decompose_element_attr((['ce', 'll'], {'th': 1}))
+    >>> decompose((['ce', 'll'], {'th': 1}))
     (['ce', 'll'], {'th': 1})
-    >>> decompose_element_attr(('ce', 'll', {'th': 1}))
+    >>> decompose(('ce', 'll', {'th': 1}))
     (('ce', 'll'), {'th': 1})
     '''
     try:
@@ -512,8 +509,7 @@ def decompose_element_attr(obj, prefer_container=0):
 
 class Output(object):
     def __init__(self, file):
-        self.file = file
-        self.write = self.file.write
+        self.write = file.write
 
     def form_rows(self, layout, scaffold, prefill={}, errors=()):
         scf = []
@@ -716,7 +712,7 @@ class Output(object):
                 self.write(esc(fill))
             self.endtag(element)
 
-    def element_array(self, __name, *container, **key):
+    def element_array(self, __name, *containers, **kwargs):
         '''Wraps recursive containers up as Html.
 
         The first tag level is dictated by %element. This does not mean that
@@ -765,33 +761,33 @@ class Output(object):
         super_elements = ('table', 'ul', 'ol', 'select', 'form', 'fieldset')
         # step 1: no wrapping for free, one positional argument or several
         # We get positional arguments in a list, even when received just one.
-        if len(container) == 1:
-            container = container[0]
+        if len(containers) == 1:
+            containers = containers[0]
         # step 2: we work only with container. As a convenient, we wrap up.
-        if not iscontainer(container):
-            container = [container]
+        if not iscontainer(containers):
+            containers = [containers]
         # step 3: super_elements yes, get a wrapping for free
         # they have to omit they natural wrapping
         if __name in super_elements:
-            container = [container]
-        container, main_attrs = decompose_element_attr(container,
-                                                       prefer_container=1)
-        main_attrs = join_dicts(main_attrs, key)
-        for one in container:
-            cdata, cattrs = decompose_element_attr(one)
-            all_attrs = join_dicts(main_attrs, cattrs)
-            __name, cdata, descendant, descendant_attrs = _element_fixup(
-                __name, cdata, all_attrs)
-            if iscontainer(cdata):
-                eaa = _elements[__name].ele_as_attr
-                eaav = all_attrs.pop(eaa, None)
-                self.tag(__name, all_attrs)
-                if eaa and eaav is not None:
-                    self.filled_element(eaa, eaav)
-                self.element_array(descendant, cdata, **descendant_attrs)
-                self.endtag(__name)
+            containers = [containers]
+        containers, main_attrs = decompose(containers,
+                                           prefer_container=1)
+        main_attrs = join_dicts(main_attrs, kwargs)
+        for item in containers:
+            item_data, item_attrs = decompose(item)
+            all_attrs = join_dicts(main_attrs, item_attrs)
+            translated_element_name, item_data, descendant, descendant_attrs = _element_fixup(
+                __name, item_data, all_attrs)
+            if iscontainer(item_data):
+                eaa_name = _elements[__name].ele_as_attr
+                eaa_data = all_attrs.pop(eaa_name, None)
+                self.tag(translated_element_name, all_attrs)
+                if eaa_name and eaa_data is not None:
+                    self.filled_element(eaa_name, eaa_data)
+                self.element_array(descendant, item_data, **descendant_attrs)
+                self.endtag(translated_element_name)
             else:
-                self.filled_element(__name, cdata, all_attrs)
+                self.filled_element(translated_element_name, item_data, all_attrs)
 
     def a(self, url, text, adic=None, **attr):
         attr['href'] = url
@@ -843,6 +839,7 @@ class String(object):
 
     def _flush(self):
         ret = self._buffer.getvalue()
+        self._buffer.seek(0)
         self._buffer.truncate(0)
         return Html(ret)
 
