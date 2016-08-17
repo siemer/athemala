@@ -43,8 +43,8 @@ asso = {_empty_inline: ('empty',), _empty_oneline: ('empty', 'tagnl'),
         _inline_elements: ()}
 
 descendants = {'ul': ('li',), 'ol': ('li',), 'li': ('ul', 'ol'),
-               'table': ('tr',), 'tr': ('td', 'th'), 'td': ('table',),
-               'th': ('table',), 'form': ('table', 'fieldset'),
+               'table': ('tr',), 'tr': ('td', 'th'), 'td': ('ul',),
+               'th': ('ul',), 'form': ('table', 'fieldset'),
                'fieldset': ('table',),
                'select': ('option',)}
 overwrite = {'ul': ('ol',), 'td': ('th',)}
